@@ -345,6 +345,31 @@ export default function ProductPage() {
               )}
             </div>
 
+            {/* Add Variant Picker here */}
+            {data.product.options.some((option: any) => option.values.length > 1) &&
+              data.product.options.map((option: any) => (
+                <div key={option.id} className="mt-4">
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">
+                    {option.name}
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {option.values.map((value: string) => (
+                      <button
+                        key={value}
+                        onClick={() => handleOptionChange(option.name, value)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          selectedOptions[option.name] === value
+                            ? 'bg-[#63D7B2] text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {value}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
             {/* 5. Quantity Input & Add To Cart */}
             <div className="mt-4 flex items-center gap-4">
               <div className="flex items-center border rounded-lg">
@@ -378,7 +403,7 @@ export default function ProductPage() {
               <button
                 onClick={handleAddToCart}
                 disabled={isAdded || !selectedVariant || selectedVariant.quantityAvailable === 0}
-                className={`flex-1 px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-200 flex items-center justify-center gap-3 ${
+                className={`flex-1 px-3 py-3 rounded-xl font-semibold text-lg transition-all duration-200 flex items-center justify-center gap-3 ${
                   isAdded
                     ? 'bg-green-500 text-white'
                     : selectedVariant?.quantityAvailable === 0
@@ -421,6 +446,20 @@ export default function ProductPage() {
               description="Makkelijk en snel contact via e-mail of chat"
             />
           </div>
+
+          {/* Add Description below benefits */}
+          {data.product.description && (
+            <div className="prose prose-sm max-w-none text-gray-600 pt-6 mt-6 border-t">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Productomschrijving
+              </h3>
+              <div
+                dangerouslySetInnerHTML={{
+                  __html: data.product.descriptionHtml || data.product.description,
+                }}
+              />
+            </div>
+          )}
         </div>
 
         {/* DESKTOP LAYOUT */}
