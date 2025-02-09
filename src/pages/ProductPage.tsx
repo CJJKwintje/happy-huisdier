@@ -653,7 +653,7 @@ export default function ProductPage() {
                 />
                 <BenefitItem
                   icon={MessageCircleHeart}
-                  title="Vragen? Wij helpen graag!"
+                  title="Vragen? Wij helpen graag!!"
                   description="Makkelijk en snel contact via e-mail of chat"
                 />
               </div>
