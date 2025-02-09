@@ -5,7 +5,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useClickOutside } from '../hooks/useClickOutside';
 
 const CartPreview: React.FC = () => {
-  const { cart, removeFromCart, updateQuantity } = useCart();
+  const { cart, removeFromCart } = useCart();
   const location = useLocation();
   const [isVisible, setIsVisible] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -60,29 +60,20 @@ const CartPreview: React.FC = () => {
                 />
                 <div className="ml-2">
                   <h4 className="text-sm font-medium">{item.name}</h4>
-                  <p className="text-sm text-gray-600">€{item.price.toFixed(2)}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-gray-600">€{item.price.toFixed(2)}</p>
+                    <span className="text-sm text-gray-400">×</span>
+                    <span className="text-sm text-gray-600">{item.quantity}</span>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center">
-                <select
-                  value={item.quantity}
-                  onChange={(e) => updateQuantity(item.id, parseInt(e.target.value))}
-                  className="w-16 p-1 text-sm border rounded mr-2"
-                >
-                  {[1, 2, 3, 4, 5].map((num) => (
-                    <option key={num} value={num}>
-                      {num}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={() => removeFromCart(item.id)}
-                  className="text-gray-400 hover:text-red-500"
-                  aria-label="Remove item"
-                >
-                  <X size={16} />
-                </button>
-              </div>
+              <button
+                onClick={() => removeFromCart(item.id)}
+                className="text-gray-400 hover:text-red-500"
+                aria-label="Remove item"
+              >
+                <X size={16} />
+              </button>
             </div>
           ))}
         </div>
@@ -94,7 +85,7 @@ const CartPreview: React.FC = () => {
           </div>
           <Link
             to="/cart"
-            className="block w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition-colors text-center"
+            className="block w-full bg-[#63D7B2] hover:bg-[#47C09A] text-white py-2 rounded-lg transition-colors text-center"
             onClick={() => setIsVisible(false)}
           >
             Naar winkelwagen

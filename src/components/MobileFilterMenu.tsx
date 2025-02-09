@@ -5,19 +5,23 @@ import SearchFilters from './SearchFilters';
 interface MobileFilterMenuProps {
   isOpen: boolean;
   onClose: () => void;
-  availableTags: string[];
-  selectedTags: string[];
+  availableBrands: string[];
+  selectedBrands: string[];
   selectedPriceRanges: string[];
-  onFilterChange: (type: 'price' | 'tags', value: string) => void;
+  productTypes?: string[];
+  selectedTypes?: string[];
+  onFilterChange: (type: 'price' | 'brand' | 'type', value: string) => void;
   onClearFilters: () => void;
 }
 
 export default function MobileFilterMenu({
   isOpen,
   onClose,
-  availableTags,
-  selectedTags,
+  availableBrands,
+  selectedBrands,
   selectedPriceRanges,
+  productTypes,
+  selectedTypes,
   onFilterChange,
   onClearFilters,
 }: MobileFilterMenuProps) {
@@ -42,9 +46,11 @@ export default function MobileFilterMenu({
                 </div>
                 <div className="p-4">
                   <SearchFilters
-                    availableTags={availableTags}
-                    selectedTags={selectedTags}
+                    availableBrands={availableBrands}
+                    selectedBrands={selectedBrands}
                     selectedPriceRanges={selectedPriceRanges}
+                    productTypes={productTypes}
+                    selectedTypes={selectedTypes}
                     onFilterChange={onFilterChange}
                     onClearFilters={onClearFilters}
                   />

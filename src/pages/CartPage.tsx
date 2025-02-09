@@ -194,10 +194,10 @@ const CartPage: React.FC = () => {
             <button
               onClick={() => handleCheckout(false)}
               disabled={isLoading}
-              className={`w-full bg-blue-500 text-white py-3 rounded-lg transition-colors ${
+              className={`w-full bg-[#63D7B2] text-white py-3 rounded-lg transition-colors ${
                 isLoading
                   ? 'opacity-75 cursor-not-allowed'
-                  : 'hover:bg-blue-600'
+                  : 'hover:bg-[#47C09A]'
               }`}
             >
               {isLoading ? 'Bezig met laden...' : 'Afrekenen'}

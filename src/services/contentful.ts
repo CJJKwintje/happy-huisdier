@@ -3,16 +3,12 @@ import { createClient } from 'contentful';
 const SPACE_ID = import.meta.env.VITE_CONTENTFUL_SPACE_ID;
 const ACCESS_TOKEN = import.meta.env.VITE_CONTENTFUL_ACCESS_TOKEN;
 
-if (!SPACE_ID || !ACCESS_TOKEN) {
-  throw new Error(
-    'Missing required environment variables: VITE_CONTENTFUL_SPACE_ID and/or VITE_CONTENTFUL_ACCESS_TOKEN'
-  );
-}
-
-export const contentfulClient = createClient({
-  space: SPACE_ID,
-  accessToken: ACCESS_TOKEN,
-});
+export const contentfulClient = SPACE_ID && ACCESS_TOKEN
+  ? createClient({
+      space: SPACE_ID,
+      accessToken: ACCESS_TOKEN,
+    })
+  : null;
 
 export interface ContentfulPage {
   title: string;
@@ -30,6 +26,11 @@ const generateSlug = (title: string): string => {
 };
 
 export const getContentfulPage = async (entryId: string): Promise<ContentfulPage | null> => {
+  if (!contentfulClient) {
+    console.warn('Contentful client not initialized - missing environment variables');
+    return null;
+  }
+
   try {
     const entry = await contentfulClient.getEntry(entryId);
     const title = entry.fields.title as string;
@@ -45,6 +46,11 @@ export const getContentfulPage = async (entryId: string): Promise<ContentfulPage
 };
 
 export const getAllLegalPages = async (): Promise<ContentfulPage[]> => {
+  if (!contentfulClient) {
+    console.warn('Contentful client not initialized - missing environment variables');
+    return [];
+  }
+
   try {
     const entries = await contentfulClient.getEntries({
       content_type: 'legalPage',

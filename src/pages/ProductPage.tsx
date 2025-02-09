@@ -1,16 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from 'urql';
 import { gql } from 'urql';
 import {
   ArrowLeft,
   Truck,
-  Shield,
-  RefreshCw,
+  MessageCircleHeart,
+  Timer,
   Loader2,
   ShoppingCart,
   Check,
   ImageOff,
+  Plus,
+  Minus
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import SEO from '../components/SEO';
@@ -24,14 +26,30 @@ const PRODUCT_QUERY = gql`
       descriptionHtml
       productType
       tags
-      variants(first: 1) {
+      vendor
+      options {
+        id
+        name
+        values
+      }
+      variants(first: 100) {
         edges {
           node {
             id
+            title
+            selectedOptions {
+              name
+              value
+            }
             price {
               amount
               currencyCode
             }
+            compareAtPrice {
+              amount
+              currencyCode
+            }
+            quantityAvailable
           }
         }
       }
@@ -48,6 +66,10 @@ const PRODUCT_QUERY = gql`
           amount
           currencyCode
         }
+        maxVariantPrice {
+          amount
+          currencyCode
+        }
       }
     }
   }
@@ -56,8 +78,8 @@ const PRODUCT_QUERY = gql`
 const BenefitItem = ({ icon: Icon, title, description }: any) => (
   <div className="flex items-start gap-4">
     <div className="flex-shrink-0">
-      <div className="p-2 bg-blue-50 rounded-lg">
-        <Icon className="w-5 h-5 text-blue-600" />
+      <div className="p-2 bg-[#D9FFF3] rounded-lg">
+        <Icon className="w-5 h-5 text-[#47C09A]" />
       </div>
     </div>
     <div>
@@ -72,7 +94,7 @@ const ProductImage = ({ image, alt }: { image: any; alt: string }) => {
   const [hasError, setHasError] = React.useState(false);
 
   return (
-    <div className="w-full h-full bg-white flex items-center justify-center p-8">
+    <div className="w-full h-full bg-white flex items-center justify-center p-8 relative">
       {!hasError ? (
         <>
           {isLoading && (
@@ -103,6 +125,8 @@ export default function ProductPage() {
   const { addToCart } = useCart();
   const [selectedImage, setSelectedImage] = React.useState(0);
   const [isAdded, setIsAdded] = React.useState(false);
+  const [selectedOptions, setSelectedOptions] = React.useState<Record<string, string>>({});
+  const [quantity, setQuantity] = useState(1);
 
   const [result] = useQuery({
     query: PRODUCT_QUERY,
@@ -110,6 +134,70 @@ export default function ProductPage() {
   });
 
   const { data, fetching, error } = result;
+
+  const findSelectedVariant = React.useCallback(() => {
+    if (!data?.product?.variants?.edges) return null;
+    return data.product.variants.edges.find(({ node }: any) => {
+      return node.selectedOptions.every(
+        (option: any) => selectedOptions[option.name] === option.value
+      );
+    })?.node;
+  }, [data, selectedOptions]);
+
+  React.useEffect(() => {
+    if (data?.product?.options) {
+      const initialOptions: Record<string, string> = {};
+      data.product.options.forEach((option: any) => {
+        initialOptions[option.name] = option.values[0];
+      });
+      setSelectedOptions(initialOptions);
+    }
+  }, [data]);
+
+  const handleOptionChange = (optionName: string, value: string) => {
+    setSelectedOptions(prev => ({
+      ...prev,
+      [optionName]: value
+    }));
+  };
+
+  const selectedVariant = findSelectedVariant();
+  const price = selectedVariant
+    ? parseFloat(selectedVariant.price.amount)
+    : data?.product?.priceRange?.minVariantPrice
+    ? parseFloat(data.product.priceRange.minVariantPrice.amount)
+    : 0;
+
+  const compareAtPrice =
+    selectedVariant?.compareAtPrice && parseFloat(selectedVariant.compareAtPrice.amount) > 0
+      ? parseFloat(selectedVariant.compareAtPrice.amount)
+      : null;
+
+  const isOnSale = compareAtPrice && compareAtPrice > price;
+  const discount = isOnSale
+    ? Math.round((1 - price / compareAtPrice) * 100)
+    : null;
+
+  const handleQuantityChange = (value: number) => {
+    const newQuantity = Math.max(1, Math.min(value, selectedVariant?.quantityAvailable || 99));
+    setQuantity(newQuantity);
+  };
+
+  const handleAddToCart = () => {
+    if (!selectedVariant) return;
+    addToCart({
+      id: parseInt(id as string),
+      name: data.product.title,
+      price,
+      image: data.product.images.edges[0].node.originalSrc,
+      category: data.product.productType,
+      variantId: selectedVariant.id,
+      variantTitle: selectedVariant.title,
+      quantity: quantity
+    });
+    setIsAdded(true);
+    setTimeout(() => setIsAdded(false), 2000);
+  };
 
   if (fetching) {
     return (
@@ -167,34 +255,17 @@ export default function ProductPage() {
     );
   }
 
-  const { product } = data;
-  const images = product.images.edges.map(({ node }: any) => node);
-  const price = parseFloat(product.priceRange.minVariantPrice.amount);
-  const variantId = product.variants.edges[0]?.node.id;
   const canonicalUrl = `https://teddyshondenshop.nl/product/${id}`;
-
-  const handleAddToCart = () => {
-    addToCart({
-      id: parseInt(id as string),
-      name: product.title,
-      price,
-      image: images[0].originalSrc,
-      category: product.productType,
-      variantId: variantId,
-    });
-    setIsAdded(true);
-    setTimeout(() => setIsAdded(false), 2000);
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <SEO
-        title={product.title}
-        description={product.description || `Koop ${product.title} bij Teddy's Hondenshop`}
+        title={data.product.title}
+        description={data.product.description || `Koop ${data.product.title} bij Teddy's Hondenshop`}
         canonical={canonicalUrl}
         type="product"
-        image={images[0]?.originalSrc}
-        imageAlt={images[0]?.altText || product.title}
+        image={data.product.images.edges[0]?.node.originalSrc}
+        imageAlt={data.product.images.edges[0]?.node.altText || data.product.title}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -206,21 +277,168 @@ export default function ProductPage() {
           Verder winkelen
         </button>
 
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        {/* MOBILE LAYOUT */}
+        <div className="lg:hidden p-8 bg-white">
+          {/* 1. Title (Brand & Product Title) */}
+          <div className="mb-4">
+            <h2 className="text-sm font-medium text-gray-500">{data.product.vendor}</h2>
+            <h1 className="text-3xl font-bold text-gray-900">{data.product.title}</h1>
+          </div>
+
+          {/* 2. Images */}
+          <div className="mb-4">
+            <div className="aspect-square rounded-xl overflow-hidden bg-white border border-gray-100">
+              <ProductImage
+                image={data.product.images.edges[selectedImage].node}
+                alt={data.product.images.edges[selectedImage].node.altText || data.product.title}
+              />
+            </div>
+            {data.product.images.edges.length > 1 && (
+              <div className="grid grid-cols-5 gap-3 mt-4">
+                {data.product.images.edges.map((image: any, index: number) => (
+                  <button
+                    key={image.node.originalSrc}
+                    onClick={() => setSelectedImage(index)}
+                    className={`aspect-square rounded-lg overflow-hidden bg-white border transition-all ${
+                      selectedImage === index
+                        ? 'ring-2 ring-blue-500 ring-offset-2 border-transparent'
+                        : 'border-gray-100 hover:border-gray-200'
+                    }`}
+                  >
+                    <div className="w-full h-full p-2">
+                      <img
+                        src={image.node.originalSrc}
+                        alt={image.node.altText || `${data.product.title} ${index + 1}`}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 3. Price */}
+          <div className="border-t pt-4 mb-4">
+            <div>
+              <p className={`text-3xl font-bold ${isOnSale ? 'text-red-500' : 'text-gray-900'}`}>
+                €{price.toFixed(2)}
+              </p>
+              {isOnSale && compareAtPrice && (
+                <div className="flex items-center gap-2">
+                  <p className="text-lg text-gray-500 line-through">€{compareAtPrice.toFixed(2)}</p>
+                  <span className="px-2 py-1 text-sm font-medium text-red-500 bg-red-50 rounded">
+                    -{discount}%
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* 4. In Stock Information */}
+            <div className="mt-4">
+              {selectedVariant?.quantityAvailable > 0 ? (
+                <p className="text-green-600 text-sm">
+                  {selectedVariant.quantityAvailable} op voorraad
+                </p>
+              ) : (
+                <p className="text-red-500 text-sm">Niet op voorraad</p>
+              )}
+            </div>
+
+            {/* 5. Quantity Input & Add To Cart */}
+            <div className="mt-4 flex items-center gap-4">
+              <div className="flex items-center border rounded-lg">
+                <button
+                  onClick={() => handleQuantityChange(quantity - 1)}
+                  disabled={quantity <= 1}
+                  className="p-2 text-gray-600 hover:text-gray-900 disabled:text-gray-400"
+                  aria-label="Decrease quantity"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <input
+                  type="number"
+                  min="1"
+                  max={selectedVariant?.quantityAvailable || 99}
+                  value={quantity}
+                  onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)}
+                  className="w-16 text-center border-x py-2 focus:outline-none no-spinner"
+                  aria-label="Product quantity"
+                />
+                <button
+                  onClick={() => handleQuantityChange(quantity + 1)}
+                  disabled={quantity >= (selectedVariant?.quantityAvailable || 99)}
+                  className="p-2 text-gray-600 hover:text-gray-900 disabled:text-gray-400"
+                  aria-label="Increase quantity"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+
+              <button
+                onClick={handleAddToCart}
+                disabled={isAdded || !selectedVariant || selectedVariant.quantityAvailable === 0}
+                className={`flex-1 px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-200 flex items-center justify-center gap-3 ${
+                  isAdded
+                    ? 'bg-green-500 text-white'
+                    : selectedVariant?.quantityAvailable === 0
+                    ? 'bg-gray-300 cursor-not-allowed'
+                    : 'bg-[#63D7B2] hover:bg-[#47C09A] text-white'
+                }`}
+              >
+                {isAdded ? (
+                  <>
+                    <Check className="w-6 h-6" />
+                    Toegevoegd
+                  </>
+                ) : selectedVariant?.quantityAvailable === 0 ? (
+                  'Uitverkocht'
+                ) : (
+                  <>
+                    <ShoppingCart className="w-6 h-6" />
+                    Voeg toe
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* 6. Benefits */}
+          <div className="space-y-4">
+            <BenefitItem
+              icon={Truck}
+              title="Gratis Verzending"
+              description="Gratis verzending vanaf €50"
+            />
+            <BenefitItem
+              icon={Timer}
+              title="Snelle bezorging"
+              description="Voor 17:30 besteld, dezelfde dag verzonden"
+            />
+            <BenefitItem
+              icon={MessageCircleHeart}
+              title="Vragen? Wij helpen graag!"
+              description="Makkelijk en snel contact via e-mail of chat"
+            />
+          </div>
+        </div>
+
+        {/* DESKTOP LAYOUT */}
+        <div className="hidden lg:block bg-white">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 p-8">
-            {/* Image Gallery */}
+            {/* Left Column - Image Gallery & Description */}
             <div className="space-y-6">
               <div className="aspect-square rounded-xl overflow-hidden bg-white border border-gray-100">
                 <ProductImage
-                  image={images[selectedImage]}
-                  alt={images[selectedImage].altText || product.title}
+                  image={data.product.images.edges[selectedImage].node}
+                  alt={data.product.images.edges[selectedImage].node.altText || data.product.title}
                 />
               </div>
-              {images.length > 1 && (
+              {data.product.images.edges.length > 1 && (
                 <div className="grid grid-cols-5 gap-3">
-                  {images.map((image: any, index: number) => (
+                  {data.product.images.edges.map((image: any, index: number) => (
                     <button
-                      key={image.originalSrc}
+                      key={image.node.originalSrc}
                       onClick={() => setSelectedImage(index)}
                       className={`aspect-square rounded-lg overflow-hidden bg-white border transition-all ${
                         selectedImage === index
@@ -230,8 +448,8 @@ export default function ProductPage() {
                     >
                       <div className="w-full h-full p-2">
                         <img
-                          src={image.originalSrc}
-                          alt={image.altText || `${product.title} ${index + 1}`}
+                          src={image.node.originalSrc}
+                          alt={image.node.altText || `${data.product.title} ${index + 1}`}
                           className="w-full h-full object-contain"
                         />
                       </div>
@@ -239,76 +457,131 @@ export default function ProductPage() {
                   ))}
                 </div>
               )}
-            </div>
-
-            {/* Product Info */}
-            <div className="space-y-8">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-4">
-                  {product.title}
-                </h1>
-                {product.description && (
-                  <div className="prose prose-sm max-w-none text-gray-600">
-                    <div
-                      dangerouslySetInnerHTML={{
-                        __html: product.descriptionHtml || product.description,
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {product.tags.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-900 mb-3">
-                    Tags
+              {data.product.description && (
+                <div className="prose prose-sm max-w-none text-gray-600 pt-6 border-t">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Productomschrijving
                   </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {product.tags.map((tag: string) => (
-                      <span
-                        key={tag}
-                        className="px-3 py-1 rounded-full bg-gray-100 text-sm text-gray-600 hover:bg-gray-200 transition-colors"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
+                  <div
+                    dangerouslySetInnerHTML={{
+                      __html: data.product.descriptionHtml || data.product.description,
+                    }}
+                  />
                 </div>
               )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <BenefitItem
-                  icon={Truck}
-                  title="Gratis Verzending"
-                  description="Gratis verzending vanaf €50"
-                />
-                <BenefitItem
-                  icon={Shield}
-                  title="Veilig Betalen"
-                  description="100% veilige betaling"
-                />
-                <BenefitItem
-                  icon={RefreshCw}
-                  title="Makkelijk Retourneren"
-                  description="30 dagen bedenktijd"
-                />
+            </div>
+  
+            {/* Right Column - Product Info */}
+            <div className="space-y-8">
+              <div>
+                <h2 className="text-sm font-medium text-gray-500 mb-1">
+                  {data.product.vendor}
+                </h2>
+                <h1 className="text-3xl font-bold text-gray-900 mb-4">
+                  {data.product.title}
+                </h1>
               </div>
-
-              <div className="pt-6 border-t space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm text-gray-500">Prijs</p>
-                    <p className="text-3xl font-bold text-gray-900">
-                    €{price.toFixed(2).replace('.', ',')}
-                    </p>
+  
+              {data.product.options.some((option: any) => option.values.length > 1) &&
+                data.product.options.map((option: any) => (
+                  <div key={option.id}>
+                    <h3 className="text-sm font-medium text-gray-900 mb-3">
+                      {option.name}
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {option.values.map((value: string) => (
+                        <button
+                          key={value}
+                          onClick={() => handleOptionChange(option.name, value)}
+                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            selectedOptions[option.name] === value
+                              ? 'bg-[#63D7B2] text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {value}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+                ))}
+  
+              <div className="pt-6 border-t space-y-4">
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-500">Prijs</p>
+                  <div className="flex items-center gap-2">
+                    <p
+                      className={`text-3xl font-bold ${
+                        isOnSale ? 'text-red-500' : 'text-gray-900'
+                      }`}
+                    >
+                      €{price.toFixed(2)}
+                    </p>
+                    {isOnSale && compareAtPrice && (
+                      <>
+                        <p className="text-lg text-gray-500 line-through">
+                          €{compareAtPrice.toFixed(2)}
+                        </p>
+                        <span className="px-2 py-1 text-sm font-medium text-red-500 bg-red-50 rounded">
+                          -{discount}%
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+  
+                <div className="text-sm">
+                  {selectedVariant?.quantityAvailable > 0 ? (
+                    <p className="text-green-600">
+                      {selectedVariant.quantityAvailable} op voorraad
+                    </p>
+                  ) : (
+                    <p className="text-red-500">Niet op voorraad</p>
+                  )}
+                </div>
+  
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center border rounded-lg">
+                    <button
+                      onClick={() => handleQuantityChange(quantity - 1)}
+                      disabled={quantity <= 1}
+                      className="p-2 text-gray-600 hover:text-gray-900 disabled:text-gray-400"
+                      aria-label="Decrease quantity"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                    <input
+                      type="number"
+                      min="1"
+                      max={selectedVariant?.quantityAvailable || 99}
+                      value={quantity}
+                      onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)}
+                      className="w-16 text-center border-x py-2 focus:outline-none no-spinner"
+                      aria-label="Product quantity"
+                    />
+                    <button
+                      onClick={() => handleQuantityChange(quantity + 1)}
+                      disabled={quantity >= (selectedVariant?.quantityAvailable || 99)}
+                      className="p-2 text-gray-600 hover:text-gray-900 disabled:text-gray-400"
+                      aria-label="Increase quantity"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+  
                   <button
                     onClick={handleAddToCart}
-                    disabled={isAdded}
-                    className={`px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-200 flex items-center gap-3 ${
+                    disabled={
+                      isAdded ||
+                      !selectedVariant ||
+                      selectedVariant.quantityAvailable === 0
+                    }
+                    className={`flex-1 px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-200 flex items-center justify-center gap-3 ${
                       isAdded
                         ? 'bg-green-500 text-white'
-                        : 'bg-blue-500 hover:bg-blue-600 text-white shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40'
+                        : selectedVariant?.quantityAvailable === 0
+                        ? 'bg-gray-300 cursor-not-allowed'
+                        : 'bg-[#63D7B2] hover:bg-[#47C09A] text-white'
                     }`}
                   >
                     {isAdded ? (
@@ -316,6 +589,8 @@ export default function ProductPage() {
                         <Check className="w-6 h-6" />
                         Toegevoegd
                       </>
+                    ) : selectedVariant?.quantityAvailable === 0 ? (
+                      'Uitverkocht'
                     ) : (
                       <>
                         <ShoppingCart className="w-6 h-6" />
@@ -324,6 +599,24 @@ export default function ProductPage() {
                     )}
                   </button>
                 </div>
+              </div>
+  
+              <div className="space-y-4">
+                <BenefitItem
+                  icon={Truck}
+                  title="Gratis Verzending"
+                  description="Gratis verzending vanaf €50"
+                />
+                <BenefitItem
+                  icon={Timer}
+                  title="Snelle bezorging"
+                  description="Voor 17:30 besteld, dezelfde dag verzonden"
+                />
+                <BenefitItem
+                  icon={MessageCircleHeart}
+                  title="Vragen? Wij helpen graag!"
+                  description="Makkelijk en snel contact via e-mail of chat"
+                />
               </div>
             </div>
           </div>

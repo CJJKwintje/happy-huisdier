@@ -22,7 +22,7 @@ const PRODUCTS_QUERY = gql`
               }
             }
           }
-          variants(first: 1) {
+          variants(first: 250) {
             edges {
               node {
                 id
@@ -30,6 +30,11 @@ const PRODUCTS_QUERY = gql`
                   amount
                   currencyCode
                 }
+                compareAtPrice {
+                  amount
+                  currencyCode
+                }
+                quantityAvailable
               }
             }
           }
@@ -69,7 +74,6 @@ const HomePage: React.FC = () => {
         imageAlt="Teddy's Hondenshop - Premium hondenproducten"
       />
 
-      {/* Rest of the HomePage component remains the same */}
       <section className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-12">
         {/* Main Banner */}
         <div
@@ -204,7 +208,6 @@ const HomePage: React.FC = () => {
           >
             Bekijk alles →
           </Link>
-
         </div>
 
         {fetching ? (
@@ -219,7 +222,14 @@ const HomePage: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
             {randomProducts.map((product: any) => {
               const productId = product.id.split('/').pop();
-              const variantId = product.variants.edges[0]?.node?.id;
+              const variants = product.variants.edges;
+              const firstVariant = variants[0]?.node;
+              const hasAvailableVariant = variants.some(
+                ({ node }: any) => node.quantityAvailable > 0
+              );
+              const compareAtPrice = firstVariant?.compareAtPrice
+                ? parseFloat(firstVariant.compareAtPrice.amount)
+                : undefined;
               
               return (
                 <ProductCard
@@ -230,7 +240,10 @@ const HomePage: React.FC = () => {
                   imageUrl={product.images.edges[0]?.node.originalSrc}
                   altText={product.images.edges[0]?.node.altText}
                   price={parseFloat(product.priceRange.minVariantPrice.amount)}
-                  variantId={variantId}
+                  compareAtPrice={compareAtPrice}
+                  variantId={firstVariant?.id}
+                  hasAvailableVariant={hasAvailableVariant}
+                  variantsCount={variants.length}
                 />
               );
             })}

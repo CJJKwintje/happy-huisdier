@@ -11,7 +11,7 @@ export default function ContentTextBlock({ content }: TextBlockProps) {
   return (
     <div className="py-12 px-4">
       <div 
-        className={`max-w-4xl mx-auto prose prose-lg ${
+        className={`max-w-4xl mx-auto prose prose-lg prose-blue prose-img:rounded-xl prose-headings:font-bold ${
           alignment === 'center' ? 'text-center mx-auto' :
           alignment === 'right' ? 'ml-auto' : ''
         }`}

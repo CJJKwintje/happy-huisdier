@@ -3,10 +3,14 @@ import { Loader2 } from 'lucide-react';
 import ProductCard from './ProductCard';
 
 interface SearchResultsProps {
-  isLoading: boolean;
+  isLoading?: boolean;
   error?: string;
   products: any[];
-  searchQuery: string;
+  searchQuery?: string;
+  collection?: any;
+  filteredProducts?: any[];
+  loadMoreRef?: React.RefObject<HTMLDivElement>;
+  isFetching?: boolean;
 }
 
 export default function SearchResults({
@@ -14,6 +18,10 @@ export default function SearchResults({
   error,
   products,
   searchQuery,
+  collection,
+  filteredProducts = [],
+  loadMoreRef,
+  isFetching,
 }: SearchResultsProps) {
   if (isLoading) {
     return (
@@ -35,7 +43,9 @@ export default function SearchResults({
     return (
       <div className="text-center py-12">
         <h3 className="text-lg font-medium text-gray-900 mb-2">
-          Geen producten gevonden voor "{searchQuery}"
+          {searchQuery
+            ? `Geen producten gevonden voor "${searchQuery}"`
+            : 'Geen producten gevonden'}
         </h3>
         <p className="text-gray-500">
           Probeer een ander zoekwoord of pas de filters aan om te vinden wat je
@@ -46,24 +56,45 @@ export default function SearchResults({
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-      {products.map((product) => {
-        const productId = product.id.split('/').pop();
-        const variantId = product.variants?.edges[0]?.node?.id;
-        
-        return (
-          <ProductCard
-            key={productId}
-            id={parseInt(productId)}
-            title={product.title}
-            category={product.productType || 'General'}
-            imageUrl={product.images.edges[0]?.node.originalSrc}
-            altText={product.images.edges[0]?.node.altText}
-            price={parseFloat(product.priceRange.minVariantPrice.amount)}
-            variantId={variantId}
-          />
-        );
-      })}
-    </div>
+    <>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+        {products.map((product) => {
+          const productId = product.id.split('/').pop();
+          const firstVariant = product.variants?.edges[0]?.node;
+          const compareAtPrice = firstVariant?.compareAtPrice
+            ? parseFloat(firstVariant.compareAtPrice.amount)
+            : undefined;
+          
+          return (
+            <ProductCard
+              key={productId}
+              id={parseInt(productId)}
+              title={product.title}
+              category={product.productType || (collection?.title ?? 'General')}
+              imageUrl={product.images.edges[0]?.node.originalSrc}
+              altText={product.images.edges[0]?.node.altText}
+              price={parseFloat(product.priceRange.minVariantPrice.amount)}
+              compareAtPrice={compareAtPrice}
+              variantId={product.firstVariantId}
+              hasAvailableVariant={product.hasAvailableVariant}
+              variantsCount={product.variantsCount}
+            />
+          );
+        })}
+      </div>
+
+      {products.length < (filteredProducts?.length ?? 0) && (
+        <div
+          ref={loadMoreRef}
+          className="flex justify-center items-center py-8"
+        >
+          {isFetching ? (
+            <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+          ) : (
+            <div className="h-8" />
+          )}
+        </div>
+      )}
+    </>
   );
 }

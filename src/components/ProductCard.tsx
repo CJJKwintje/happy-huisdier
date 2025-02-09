@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-import { ShoppingCart, Check, ImageOff } from 'lucide-react';
+import { ShoppingCart, Check, ImageOff, Layers } from 'lucide-react';
 
 interface ProductCardProps {
   id: number;
@@ -10,7 +10,10 @@ interface ProductCardProps {
   imageUrl: string;
   altText: string;
   price: number;
+  compareAtPrice?: number;
   variantId?: string;
+  hasAvailableVariant?: boolean;
+  variantsCount?: number;
 }
 
 function ProductImage({ imageUrl, altText, title }: { imageUrl: string; altText: string; title: string }) {
@@ -50,16 +53,26 @@ export default function ProductCard({
   imageUrl, 
   altText, 
   price,
-  variantId 
+  compareAtPrice,
+  variantId,
+  hasAvailableVariant = true,
+  variantsCount = 1
 }: ProductCardProps) {
   const { addToCart } = useCart();
   const [isAdded, setIsAdded] = React.useState(false);
+  const isSoldOut = !hasAvailableVariant;
+  const hasVariants = variantsCount > 1;
+  
+  // Ensure price is a valid number
+  const validPrice = typeof price === 'number' && !isNaN(price) && price > 0;
+  const validCompareAtPrice = typeof compareAtPrice === 'number' && !isNaN(compareAtPrice) && compareAtPrice > 0;
+  const isOnSale = validCompareAtPrice && compareAtPrice > price;
+  const discount = isOnSale ? Math.round((1 - price / compareAtPrice) * 100) : null;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
 
-    if (!variantId) {
-      console.error('No variant ID available for product:', id);
+    if (!variantId || isSoldOut || !validPrice) {
       return;
     }
 
@@ -91,6 +104,16 @@ export default function ProductCard({
             title={title}
           />
         </div>
+        {isSoldOut && (
+          <div className="absolute top-2 right-2 bg-gray-900/90 text-white px-2 py-1 rounded text-sm font-medium">
+            Uitverkocht
+          </div>
+        )}
+        {isOnSale && validCompareAtPrice && (
+          <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-sm font-medium">
+            -{discount}%
+          </div>
+        )}
       </div>
       
       <div className="p-4">
@@ -101,28 +124,48 @@ export default function ProductCard({
         </div>
         
         <div className="flex items-center justify-between gap-4">
-          <span className="text-lg font-bold text-gray-900">
-          €{price.toFixed(2).replace('.', ',')}
-          </span>
-          <button
-            onClick={handleAddToCart}
-            disabled={isAdded || !variantId}
-            className={`flex-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-              isAdded
-                ? 'bg-green-500 text-white'
-                : !variantId
-                ? 'bg-gray-300 cursor-not-allowed'
-                : 'bg-blue-500 hover:bg-blue-600 text-white'
-            }`}
-          >
-            {isAdded ? (
+          <div className="flex items-center gap-2">
+            {validPrice ? (
               <>
-                <Check className="w-4 h-4" />
+                <span className={`text-base font-light ${isOnSale ? 'text-red-500' : 'text-gray-900'}`}>
+                  €{price.toFixed(2)}
+                </span>
+                {isOnSale && validCompareAtPrice && (
+                  <span className="text-sm text-gray-500 line-through">
+                    €{compareAtPrice.toFixed(2)}
+                  </span>
+                )}
               </>
             ) : (
-              <ShoppingCart className="w-4 h-4" />
+              <span className="text-lg font-bold text-gray-900">Prijs op aanvraag</span>
             )}
-          </button>
+          </div>
+          {hasVariants ? (
+            <button
+              className="w-10 h-10 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center text-gray-600 hover:text-gray-900"
+              title="Bekijk varianten"
+            >
+              <Layers className="w-5 h-5" />
+            </button>
+          ) : (
+            <button
+              onClick={handleAddToCart}
+              disabled={isAdded || !variantId || isSoldOut || !validPrice}
+              className={`flex-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                isAdded
+                  ? 'bg-green-500 text-white'
+                  : !variantId || isSoldOut || !validPrice
+                  ? 'bg-gray-300 cursor-not-allowed'
+                  : 'bg-[#63D7B2] hover:bg-[#47C09A] text-white'
+              }`}
+            >
+              {isAdded ? (
+                <Check className="w-4 h-4" />
+              ) : (
+                <ShoppingCart className="w-4 h-4" />
+              )}
+            </button>
+          )}
         </div>
       </div>
     </Link>

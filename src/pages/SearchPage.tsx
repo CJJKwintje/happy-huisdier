@@ -1,12 +1,14 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery } from 'urql';
 import { gql } from 'urql';
-import { Search, SlidersHorizontal } from 'lucide-react';
+import { Search, SlidersHorizontal, Loader2 } from 'lucide-react';
 import SearchFilters from '../components/SearchFilters';
 import SearchResults from '../components/SearchResults';
 import MobileFilterMenu from '../components/MobileFilterMenu';
+import BackToTop from '../components/BackToTop';
 import SEO from '../components/SEO';
+import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 
 const SEARCH_PRODUCTS_QUERY = gql`
   query SearchProducts($query: String!) {
@@ -17,7 +19,8 @@ const SEARCH_PRODUCTS_QUERY = gql`
           title
           productType
           tags
-          variants(first: 1) {
+          vendor
+          variants(first: 250) {
             edges {
               node {
                 id
@@ -25,6 +28,11 @@ const SEARCH_PRODUCTS_QUERY = gql`
                   amount
                   currencyCode
                 }
+                compareAtPrice {
+                  amount
+                  currencyCode
+                }
+                quantityAvailable
               }
             }
           }
@@ -56,8 +64,12 @@ export default function SearchPage() {
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const [selectedPriceRanges, setSelectedPriceRanges] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const [availableBrands, setAvailableBrands] = useState<string[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
+  const [displayedProducts, setDisplayedProducts] = useState<any[]>([]);
+  const PRODUCTS_PER_PAGE = 16;
 
   const buildQuery = useCallback(() => {
     return `title:*${searchQuery}* OR tag:*${searchQuery}*`;
@@ -68,16 +80,51 @@ export default function SearchPage() {
     variables: { query: buildQuery() },
   });
 
+  const loadMoreProducts = useCallback(() => {
+    const currentLength = displayedProducts.length;
+    const nextProducts = filteredProducts.slice(
+      currentLength,
+      currentLength + PRODUCTS_PER_PAGE
+    );
+    
+    if (nextProducts.length > 0) {
+      setDisplayedProducts(prev => [...prev, ...nextProducts]);
+      setIsFetching(false);
+    }
+  }, [filteredProducts, displayedProducts.length]);
+
+  const { loadMoreRef, isFetching, setIsFetching } = useInfiniteScroll(loadMoreProducts);
+
   useEffect(() => {
     if (result.data) {
-      const products = result.data.products.edges.map(({ node }: any) => node);
+      const products = result.data.products.edges.map(({ node }: any) => {
+        const variants = node.variants.edges;
+        const hasAvailableVariant = variants.some(
+          ({ node: variant }: any) => variant.quantityAvailable > 0
+        );
+        const firstVariant = variants[0]?.node;
+        const compareAtPrice = firstVariant?.compareAtPrice
+          ? parseFloat(firstVariant.compareAtPrice.amount)
+          : undefined;
+
+        return {
+          ...node,
+          hasAvailableVariant,
+          variantsCount: variants.length,
+          firstVariantId: firstVariant?.id,
+          compareAtPrice
+        };
+      });
       
-      // Extract unique tags
+      // Extract unique tags and brands
       const tags = new Set<string>();
+      const brands = new Set<string>();
       products.forEach((product: any) => {
         product.tags.forEach((tag: string) => tags.add(tag));
+        if (product.vendor) brands.add(product.vendor);
       });
       setAvailableTags(Array.from(tags));
+      setAvailableBrands(Array.from(brands));
 
       // Filter products based on selected filters
       const filtered = products.filter((product: any) => {
@@ -94,32 +141,48 @@ export default function SearchPage() {
           selectedTags.length === 0 ||
           selectedTags.some((tag) => product.tags.includes(tag));
 
-        return matchesPrice && matchesTags;
+        const matchesBrands =
+          selectedBrands.length === 0 ||
+          selectedBrands.includes(product.vendor);
+
+        return matchesPrice && matchesTags && matchesBrands;
       });
 
       setFilteredProducts(filtered);
+      setDisplayedProducts(filtered.slice(0, PRODUCTS_PER_PAGE));
     }
-  }, [result.data, selectedPriceRanges, selectedTags]);
+  }, [result.data, selectedPriceRanges, selectedTags, selectedBrands]);
 
-  const handleFilterChange = (type: 'price' | 'tags', value: string) => {
-    if (type === 'price') {
-      setSelectedPriceRanges((prev) =>
-        prev.includes(value)
-          ? prev.filter((range) => range !== value)
-          : [...prev, value]
-      );
-    } else {
-      setSelectedTags((prev) =>
-        prev.includes(value)
-          ? prev.filter((tag) => tag !== value)
-          : [...prev, value]
-      );
+  const handleFilterChange = (type: 'price' | 'tags' | 'brand', value: string) => {
+    switch (type) {
+      case 'price':
+        setSelectedPriceRanges((prev) =>
+          prev.includes(value)
+            ? prev.filter((range) => range !== value)
+            : [value]
+        );
+        break;
+      case 'tags':
+        setSelectedTags((prev) =>
+          prev.includes(value)
+            ? prev.filter((tag) => tag !== value)
+            : [...prev, value]
+        );
+        break;
+      case 'brand':
+        setSelectedBrands((prev) =>
+          prev.includes(value)
+            ? prev.filter((brand) => brand !== value)
+            : [...prev, value]
+        );
+        break;
     }
   };
 
   const clearFilters = () => {
     setSelectedPriceRanges([]);
     setSelectedTags([]);
+    setSelectedBrands([]);
   };
 
   const canonicalUrl = `https://teddyshondenshop.nl/search?query=${encodeURIComponent(searchQuery)}`;
@@ -159,11 +222,12 @@ export default function SearchPage() {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Desktop Filters */}
           <aside className="hidden lg:block lg:w-72 flex-shrink-0">
             <SearchFilters
               availableTags={availableTags}
+              availableBrands={availableBrands}
               selectedTags={selectedTags}
+              selectedBrands={selectedBrands}
               selectedPriceRanges={selectedPriceRanges}
               onFilterChange={handleFilterChange}
               onClearFilters={clearFilters}
@@ -176,7 +240,6 @@ export default function SearchPage() {
                 {filteredProducts.length} producten gevonden
               </div>
               
-              {/* Mobile Filter Button */}
               <button
                 onClick={() => setIsFilterMenuOpen(true)}
                 className="lg:hidden inline-flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -189,23 +252,39 @@ export default function SearchPage() {
             <SearchResults
               isLoading={result.fetching}
               error={result.error?.message}
-              products={filteredProducts}
+              products={displayedProducts}
               searchQuery={searchQuery}
             />
+
+            {displayedProducts.length < filteredProducts.length && (
+              <div
+                ref={loadMoreRef}
+                className="flex justify-center items-center py-8"
+              >
+                {isFetching ? (
+                  <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                ) : (
+                  <div className="h-8" />
+                )}
+              </div>
+            )}
           </main>
         </div>
       </div>
 
-      {/* Mobile Filter Menu */}
       <MobileFilterMenu
         isOpen={isFilterMenuOpen}
         onClose={() => setIsFilterMenuOpen(false)}
         availableTags={availableTags}
+        availableBrands={availableBrands}
         selectedTags={selectedTags}
+        selectedBrands={selectedBrands}
         selectedPriceRanges={selectedPriceRanges}
         onFilterChange={handleFilterChange}
         onClearFilters={clearFilters}
       />
+
+      <BackToTop />
     </div>
   );
 }
