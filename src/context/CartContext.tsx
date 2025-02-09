@@ -17,15 +17,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  const formatVariantId = (variantId: string) => {
-    // If it's already in the correct format, return as is
-    if (variantId.startsWith('gid://')) {
-      return variantId;
-    }
-    // Otherwise, format it correctly
-    return `gid://shopify/ProductVariant/${variantId}`;
-  };
-
   const addToCart = (product: Product) => {
     setCart((currentCart) => {
       const existingItem = currentCart.find((item) => item.id === product.id);
@@ -39,7 +30,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       return [...currentCart, { 
         ...product, 
         quantity: product.quantity || 1,
-        variantId: formatVariantId(product.variantId)
       }];
     });
   };
@@ -51,7 +41,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const updateQuantity = (productId: number, quantity: number) => {
-    if (quantity < 1) return; // Prevent negative quantities
+    if (quantity < 1) return;
     setCart((currentCart) =>
       currentCart.map((item) =>
         item.id === productId ? { ...item, quantity } : item
@@ -81,6 +71,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
         id: checkout.id,
       };
     } catch (error) {
+      console.error('Checkout error:', error);
       throw new Error(
         error instanceof Error
           ? error.message

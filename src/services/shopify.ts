@@ -18,41 +18,32 @@ export const shopifyClient = new Client({
   },
 });
 
-export const PRODUCTS_QUERY = `
-  query Products {
-    products(first: 6) {
-      edges {
-        node {
-          id
-          title
-          description
-          variants(first: 1) {
-            edges {
-              node {
-                id
-                price {
-                  amount
-                  currencyCode
-                }
-              }
-            }
-          }
-          priceRange {
-            minVariantPrice {
-              amount
-              currencyCode
-            }
-          }
-          images(first: 1) {
-            edges {
-              node {
-                url
-                altText
-              }
-            }
-          }
-          productType
-        }
+// New Cart API mutations
+const CREATE_CART_MUTATION = `
+  mutation cartCreate {
+    cartCreate {
+      cart {
+        id
+        checkoutUrl
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`;
+
+const ADD_TO_CART_MUTATION = `
+  mutation cartLinesAdd($cartId: ID!, $lines: [CartLineInput!]!) {
+    cartLinesAdd(cartId: $cartId, lines: $lines) {
+      cart {
+        id
+        checkoutUrl
+      }
+      userErrors {
+        field
+        message
       }
     }
   }
@@ -71,9 +62,7 @@ const executeWithRetry = async <T>(
       throw error;
     }
 
-    // Calculate exponential backoff delay
     const backoffDelay = BASE_RETRY_DELAY * Math.pow(2, retryCount);
-    // Add some random jitter
     const jitter = Math.random() * 1000;
     const totalDelay = backoffDelay + jitter;
 
@@ -83,79 +72,79 @@ const executeWithRetry = async <T>(
   }
 };
 
-export const CREATE_CHECKOUT_MUTATION = `
-  mutation checkoutCreate($lineItems: [CheckoutLineItemInput!]!) {
-    checkoutCreate(input: {
-      lineItems: $lineItems
-    }) {
-      checkout {
-        id
-        webUrl
-        totalPriceV2 {
-          amount
-          currencyCode
-        }
-      }
-      checkoutUserErrors {
-        code
-        field
-        message
-      }
-    }
-  }
-`;
-
 export const createCheckout = async (
   lineItems: { variantId: string; quantity: number }[]
 ) => {
   try {
-    // Validate input
     if (!Array.isArray(lineItems) || lineItems.length === 0) {
       throw new Error('Winkelwagen is leeg');
     }
 
-    // Ensure variant IDs are in the correct format
-    const formattedLineItems = lineItems.map(item => {
-      if (!item.variantId || !item.quantity) {
-        throw new Error('Ongeldige product gegevens');
-      }
-      
-      return {
-        variantId: item.variantId,
-        quantity: Math.max(1, Math.floor(item.quantity))
-      };
-    });
-
-    // Execute mutation with retry logic
-    const result = await executeWithRetry(async () => {
+    // First create a new cart
+    const createCartResult = await executeWithRetry(async () => {
       const response = await shopifyClient
-        .mutation(CREATE_CHECKOUT_MUTATION, {
-          lineItems: formattedLineItems,
-        })
+        .mutation(CREATE_CART_MUTATION, {})
         .toPromise();
 
       if (!response.data && response.error) {
+        console.error('Cart creation error:', response.error);
         throw new Error('Netwerkfout: Kan geen verbinding maken met de betaalservice');
       }
 
       return response;
     });
 
-    if (result.data?.checkoutCreate?.checkoutUserErrors?.length > 0) {
-      const error = result.data.checkoutCreate.checkoutUserErrors[0];
-      console.error('Checkout Error:', error);
-      throw new Error(`Fout bij afrekenen: ${error.message}`);
+    if (createCartResult.data?.cartCreate?.userErrors?.length > 0) {
+      const error = createCartResult.data.cartCreate.userErrors[0];
+      console.error('Cart creation error:', error);
+      throw new Error(`Fout bij aanmaken winkelwagen: ${error.message}`);
     }
 
-    if (!result.data?.checkoutCreate?.checkout) {
-      throw new Error('Geen checkout gegevens ontvangen van de betaalservice');
+    const cartId = createCartResult.data?.cartCreate?.cart?.id;
+    if (!cartId) {
+      console.error('No cart ID received:', createCartResult);
+      throw new Error('Geen winkelwagen ID ontvangen van de betaalservice');
     }
 
-    return result.data.checkoutCreate.checkout;
+    // Then add items to the cart
+    const addToCartResult = await executeWithRetry(async () => {
+      const response = await shopifyClient
+        .mutation(ADD_TO_CART_MUTATION, {
+          cartId,
+          lines: lineItems.map(item => ({
+            merchandiseId: item.variantId,
+            quantity: item.quantity
+          }))
+        })
+        .toPromise();
+
+      if (!response.data && response.error) {
+        console.error('Add to cart error:', response.error);
+        throw new Error('Netwerkfout: Kan geen producten toevoegen aan de winkelwagen');
+      }
+
+      return response;
+    });
+
+    if (addToCartResult.data?.cartLinesAdd?.userErrors?.length > 0) {
+      const error = addToCartResult.data.cartLinesAdd.userErrors[0];
+      console.error('Add to cart error:', error);
+      throw new Error(`Fout bij toevoegen producten: ${error.message}`);
+    }
+
+    const checkoutUrl = addToCartResult.data?.cartLinesAdd?.cart?.checkoutUrl;
+    if (!checkoutUrl) {
+      console.error('No checkout URL received:', addToCartResult);
+      throw new Error('Geen checkout URL ontvangen van de betaalservice');
+    }
+
+    return {
+      id: cartId,
+      webUrl: checkoutUrl
+    };
   } catch (error) {
     console.error('Checkout creation error:', error);
     
-    // Provide user-friendly error messages
     if (error instanceof Error) {
       if (error.message.includes('Network Error') || error.message.includes('Failed to fetch')) {
         throw new Error('Controleer je internetverbinding en probeer het opnieuw');
