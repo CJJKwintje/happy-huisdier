@@ -1,14 +1,37 @@
-import React, { useState } from 'react';
-import { ShoppingCart, Menu, X, Search, ChevronDown } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { ShoppingCart, Menu, X, Search, ChevronDown, User } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useQuery } from 'urql';
+import { gql } from 'urql';
+import { useClickOutside } from '../hooks/useClickOutside';
 import logo from '../assets/logo.jpg';
 
-interface NavbarProps {
-  isMenuOpen: boolean;
-  setIsMenuOpen: (isOpen: boolean) => void;
-}
+const SEARCH_SUGGESTIONS_QUERY = gql`
+  query SearchSuggestions($query: String!) {
+    products(first: 5, query: $query) {
+      edges {
+        node {
+          id
+          title
+          productType
+          images(first: 1) {
+            edges {
+              node {
+                originalSrc
+              }
+            }
+          }
+          priceRange {
+            minVariantPrice {
+              amount
+            }
+          }
+        }
+      }
+    }
+  }
+`;
 
 const categories = [
   {
@@ -40,6 +63,13 @@ const categories = [
   },
 ];
 
+interface NavbarProps {
+  isMenuOpen: boolean;
+  setIsMenuOpen: (isOpen: boolean) => void;
+}
+
+const SHOPIFY_ACCOUNT_URL = 'https://yvdedm-5e.myshopify.com/account';
+
 const Navbar: React.FC<NavbarProps> = ({ isMenuOpen, setIsMenuOpen }) => {
   const { cart } = useCart();
   const location = useLocation();
@@ -47,16 +77,50 @@ const Navbar: React.FC<NavbarProps> = ({ isMenuOpen, setIsMenuOpen }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  // Debounced search query
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm.length >= 2) {
+        setDebouncedQuery(searchTerm);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Search suggestions query
+  const [{ data: suggestionsData }] = useQuery({
+    query: SEARCH_SUGGESTIONS_QUERY,
+    variables: { query: debouncedQuery },
+    pause: debouncedQuery.length < 2,
+  });
+
+  // Close suggestions on click outside
+  useClickOutside(searchContainerRef, () => {
+    setShowSuggestions(false);
+  });
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchTerm.trim()) {
       navigate(`/search?query=${encodeURIComponent(searchTerm)}`);
       setIsSearchExpanded(false);
+      setShowSuggestions(false);
       setSearchTerm('');
       setIsMenuOpen(false);
     }
+  };
+
+  const handleSuggestionClick = (productId: string) => {
+    const id = productId.split('/').pop();
+    navigate(`/product/${id}`);
+    setSearchTerm('');
+    setShowSuggestions(false);
+    setIsSearchExpanded(false);
   };
 
   const toggleSearch = () => {
@@ -68,6 +132,7 @@ const Navbar: React.FC<NavbarProps> = ({ isMenuOpen, setIsMenuOpen }) => {
       }, 100);
     } else {
       setSearchTerm('');
+      setShowSuggestions(false);
     }
   };
 
@@ -97,37 +162,74 @@ const Navbar: React.FC<NavbarProps> = ({ isMenuOpen, setIsMenuOpen }) => {
           </div>
 
           {/* Search section */}
-          <div className={`md:flex-1 md:mx-8 transition-all duration-300 ease-in-out ${
-            isSearchExpanded 
-              ? 'absolute left-0 right-0 px-4 flex items-center h-full bg-white opacity-100 transform translate-x-0' 
-              : 'hidden md:flex opacity-0 md:opacity-100 transform translate-x-full md:translate-x-0'
-          }`}>
-            <form onSubmit={handleSearch} className="w-full flex items-center relative">
-              <input
-                id="searchInput"
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Zoek producten..."
-                className="w-full border rounded-full px-4 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 ease-in-out"
-              />
-              {isSearchExpanded ? (
-                <button
-                  type="button"
-                  onClick={toggleSearch}
-                  className="absolute right-3 p-2 transition-all duration-200 hover:scale-110"
-                >
-                  <X size={20} className="text-gray-500 hover:text-gray-800" />
-                </button>
-              ) : (
-                <button type="submit" className="absolute right-3 p-2">
-                  <Search size={20} className="text-gray-500 hover:text-gray-800" />
-                </button>
+          <div 
+            ref={searchContainerRef}
+            className="relative md:flex-1 md:mx-8"
+          >
+            <div className="w-full relative">
+              <form onSubmit={handleSearch} className="w-full flex items-center relative">
+                <input
+                  id="searchInput"
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setShowSuggestions(true);
+                  }}
+                  placeholder="Zoek producten..."
+                  className="w-full border rounded-full px-4 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 ease-in-out"
+                />
+                {isSearchExpanded ? (
+                  <button
+                    type="button"
+                    onClick={toggleSearch}
+                    className="absolute right-3 p-2 transition-all duration-200 hover:scale-110"
+                  >
+                    <X size={20} className="text-gray-500 hover:text-gray-800" />
+                  </button>
+                ) : (
+                  <button type="submit" className="absolute right-3 p-2">
+                    <Search size={20} className="text-gray-500 hover:text-gray-800" />
+                  </button>
+                )}
+              </form>
+
+              {/* Search Suggestions Dropdown */}
+              {showSuggestions && searchTerm.length >= 2 && suggestionsData?.products?.edges?.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-100 max-h-96 overflow-y-auto z-50" style={{ position: 'absolute', zIndex: 100 }}>
+                  {suggestionsData.products.edges.map(({ node: product }: any) => (
+                    <button
+                      key={product.id}
+                      onClick={() => handleSuggestionClick(product.id)}
+                      className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+                    >
+                      <div className="w-12 h-12 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
+                        {product.images.edges[0] ? (
+                          <img
+                            src={product.images.edges[0].node.originalSrc}
+                            alt={product.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-200" />
+                        )}
+                      </div>
+                      <div className="flex-1 text-left">
+                        <h4 className="text-sm font-medium text-gray-900 line-clamp-1">
+                          {product.title}
+                        </h4>
+                        <p className="text-sm text-gray-500">
+                          €{parseFloat(product.priceRange.minVariantPrice.amount).toFixed(2)}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               )}
-            </form>
+            </div>
           </div>
 
-          {/* Right section with search toggle and cart */}
+          {/* Right section with search toggle, account, and cart */}
           <div className="flex items-center gap-2">
             <button
               onClick={toggleSearch}
@@ -136,6 +238,16 @@ const Navbar: React.FC<NavbarProps> = ({ isMenuOpen, setIsMenuOpen }) => {
             >
               <Search size={24} className="text-gray-600" />
             </button>
+
+            <a
+              href={SHOPIFY_ACCOUNT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
+              aria-label="My Account"
+            >
+              <User size={24} />
+            </a>
 
             <Link 
               to="/cart"
