@@ -144,10 +144,10 @@ const Navbar: React.FC<NavbarProps> = ({ isMenuOpen, setIsMenuOpen }) => {
     <nav className="bg-white shadow-lg sticky top-0 z-50">
       {/* Main Navigation */}
       <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center h-24">
+        <div className="flex justify-between items-center h-24 relative">
           {/* Left section with menu button and logo */}
-          <div className={`flex items-center transition-all duration-300 ease-in-out transform ${
-            isSearchExpanded ? 'md:flex md:opacity-100 opacity-0 -translate-x-full md:translate-x-0' : 'opacity-100 translate-x-0'
+          <div className={`flex items-center transition-all duration-300 ease-in-out ${
+            isSearchExpanded ? 'w-0 overflow-hidden md:w-auto' : 'w-auto'
           }`}>
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -164,7 +164,11 @@ const Navbar: React.FC<NavbarProps> = ({ isMenuOpen, setIsMenuOpen }) => {
           {/* Search section */}
           <div 
             ref={searchContainerRef}
-            className="relative md:flex-1 md:mx-8"
+            className={`md:flex-1 md:mx-8 transition-all duration-300 ${
+              isSearchExpanded 
+                ? 'absolute left-4 right-[104px] md:static md:right-auto' 
+                : 'hidden md:block'
+            }`}
           >
             <div className="w-full relative">
               <form onSubmit={handleSearch} className="w-full flex items-center relative">
@@ -179,24 +183,19 @@ const Navbar: React.FC<NavbarProps> = ({ isMenuOpen, setIsMenuOpen }) => {
                   placeholder="Zoek producten..."
                   className="w-full border rounded-full px-4 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 ease-in-out"
                 />
-                {isSearchExpanded ? (
-                  <button
-                    type="button"
-                    onClick={toggleSearch}
-                    className="absolute right-3 p-2 transition-all duration-200 hover:scale-110"
-                  >
-                    <X size={20} className="text-gray-500 hover:text-gray-800" />
-                  </button>
-                ) : (
-                  <button type="submit" className="absolute right-3 p-2">
-                    <Search size={20} className="text-gray-500 hover:text-gray-800" />
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={toggleSearch}
+                  className="absolute right-3 p-2 transition-all duration-200 hover:scale-110"
+                  aria-label="Close search"
+                >
+                  <X size={20} className="text-gray-500 hover:text-gray-800" />
+                </button>
               </form>
 
               {/* Search Suggestions Dropdown */}
               {showSuggestions && searchTerm.length >= 2 && suggestionsData?.products?.edges?.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-100 max-h-96 overflow-y-auto z-50" style={{ position: 'absolute', zIndex: 100 }}>
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-100 max-h-96 overflow-y-auto z-50">
                   {suggestionsData.products.edges.map(({ node: product }: any) => (
                     <button
                       key={product.id}
@@ -233,7 +232,9 @@ const Navbar: React.FC<NavbarProps> = ({ isMenuOpen, setIsMenuOpen }) => {
           <div className="flex items-center gap-2">
             <button
               onClick={toggleSearch}
-              className="md:hidden p-2 transition-transform duration-200 hover:scale-110"
+              className={`md:hidden p-2 transition-transform duration-200 hover:scale-110 ${
+                isSearchExpanded ? 'hidden' : 'block'
+              }`}
               aria-label="Toggle search"
             >
               <Search size={24} className="text-gray-600" />
@@ -251,13 +252,10 @@ const Navbar: React.FC<NavbarProps> = ({ isMenuOpen, setIsMenuOpen }) => {
 
             <Link 
               to="/cart"
-              className={`relative p-2 transition-all duration-300 ease-in-out transform ${
-                location.pathname === '/cart' ? 'text-blue-500' : ''
-              } ${
-                isSearchExpanded ? 'md:flex md:opacity-100 opacity-0 translate-x-full md:translate-x-0' : 'opacity-100 translate-x-0'
-              }`}
+              className="relative p-2 text-gray-600"
+              aria-label="Shopping cart"
             >
-              <ShoppingCart size={24} />
+              <ShoppingCart size={24} className={location.pathname === '/cart' ? 'text-blue-500' : ''} />
               {totalItems > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                   {totalItems}
