@@ -3,6 +3,7 @@ import { useCart } from '../context/CartContext';
 import { ShoppingCart, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useClickOutside } from '../hooks/useClickOutside';
+import { formatPrice } from '../utils/formatPrice';
 
 const CartPreview: React.FC = () => {
   const { cart, removeFromCart } = useCart();
@@ -61,7 +62,7 @@ const CartPreview: React.FC = () => {
                 <div className="ml-2">
                   <h4 className="text-sm font-medium">{item.name}</h4>
                   <div className="flex items-center gap-2">
-                    <p className="text-sm text-gray-600">€{item.price.toFixed(2)}</p>
+                    <p className="text-sm text-gray-600">€{formatPrice(item.price)}</p>
                     <span className="text-sm text-gray-400">×</span>
                     <span className="text-sm text-gray-600">{item.quantity}</span>
                   </div>
@@ -81,7 +82,7 @@ const CartPreview: React.FC = () => {
         <div className="mt-4 pt-4 border-t">
           <div className="flex justify-between mb-4">
             <span className="font-semibold">Totaal:</span>
-            <span className="font-semibold">€{total.toFixed(2)}</span>
+            <span className="font-semibold">€{formatPrice(total)}</span>
           </div>
           <Link
             to="/cart"

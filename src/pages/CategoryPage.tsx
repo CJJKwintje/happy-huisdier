@@ -9,6 +9,7 @@ import MobileFilterMenu from '../components/MobileFilterMenu';
 import BackToTop from '../components/BackToTop';
 import SEO from '../components/SEO';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
+import { formatPrice } from '../utils/formatPrice';
 
 const COLLECTION_QUERY = gql`
   query GetCollection($handle: String!, $cursor: String) {
@@ -133,7 +134,9 @@ export default function CategoryPage() {
           hasAvailableVariant,
           variantsCount: variants.length,
           firstVariantId: firstVariant?.id,
-          compareAtPrice
+          compareAtPrice,
+          formattedPrice: formatPrice(parseFloat(node.priceRange.minVariantPrice.amount)),
+          formattedCompareAtPrice: compareAtPrice ? formatPrice(compareAtPrice) : undefined
         };
       });
 

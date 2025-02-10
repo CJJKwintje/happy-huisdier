@@ -5,6 +5,7 @@ import { Bone, Cookie, Dog, Dumbbell, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
+import { formatPrice } from '../utils/formatPrice';
 
 const PRODUCTS_QUERY = gql`
   query GetProducts {
@@ -244,6 +245,8 @@ const HomePage: React.FC = () => {
                   variantId={firstVariant?.id}
                   hasAvailableVariant={hasAvailableVariant}
                   variantsCount={variants.length}
+                  formattedPrice={formatPrice(parseFloat(product.priceRange.minVariantPrice.amount))}
+                  formattedCompareAtPrice={compareAtPrice ? formatPrice(compareAtPrice) : undefined}
                 />
               );
             })}

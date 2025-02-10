@@ -70,6 +70,10 @@ interface NavbarProps {
 
 const SHOPIFY_ACCOUNT_URL = 'https://yvdedm-5e.myshopify.com/account';
 
+const formatPrice = (price: number): string => {
+  return price.toFixed(2).replace('.', ',');
+};
+
 const Navbar: React.FC<NavbarProps> = ({ isMenuOpen, setIsMenuOpen }) => {
   const { cart } = useCart();
   const location = useLocation();
@@ -218,7 +222,7 @@ const Navbar: React.FC<NavbarProps> = ({ isMenuOpen, setIsMenuOpen }) => {
                           {product.title}
                         </h4>
                         <p className="text-sm text-gray-500">
-                          €{parseFloat(product.priceRange.minVariantPrice.amount).toFixed(2)}
+                          €{formatPrice(parseFloat(product.priceRange.minVariantPrice.amount))}
                         </p>
                       </div>
                     </button>

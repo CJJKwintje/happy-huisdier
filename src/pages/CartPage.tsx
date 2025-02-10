@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
-import { Trash2, MinusCircle, PlusCircle, ArrowLeft, AlertCircle, Wifi, RefreshCcw } from 'lucide-react';
+import { Trash2, MinusCircle, PlusCircle, ArrowLeft, AlertCircle, Wifi, RefreshCcw, Plus, Minus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import SEO from '../components/SEO';
+
+const formatPrice = (price: number): string => {
+  return price.toFixed(2).replace('.', ',');
+};
 
 const CartPage: React.FC = () => {
   const { cart, removeFromCart, updateQuantity, createShopifyCheckout } = useCart();
@@ -80,7 +84,7 @@ const CartPage: React.FC = () => {
       <div className="flex items-center mb-8">
         <Link
           to="/"
-          className="text-blue-500 hover:text-blue-600 flex items-center"
+          className="mb-8 text-gray-600 hover:text-gray-900 flex items-center gap-2 group"
         >
           <ArrowLeft className="mr-2" size={20} />
           Verder winkelen
@@ -94,39 +98,52 @@ const CartPage: React.FC = () => {
             {cart.map((item) => (
               <div
                 key={item.id}
-                className="bg-white rounded-lg shadow p-4 flex items-center gap-4"
+                className="bg-white rounded-lg shadow p-4 flex flex-col sm:flex-row gap-4"
               >
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="w-24 h-24 object-cover rounded"
-                />
-                <div className="flex-grow">
-                  <h3 className="font-semibold">{item.name}</h3>
-                  <p className="text-gray-600">{item.category}</p>
-                  <p className="font-bold mt-2">€{item.price.toFixed(2)}</p>
+                <div className="flex items-start gap-4 flex-1">
+                  <div className="w-20 h-20 flex-shrink-0">
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-full h-full object-contain rounded"
+                    />
+                  </div>
+                  <div className="flex-grow min-w-0">
+                    <h3 className="font-semibold text-base leading-tight line-clamp-2 mb-2">
+                      {item.name}
+                    </h3>
+                    <p>€{formatPrice(item.price)}</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() =>
-                      updateQuantity(item.id, Math.max(1, item.quantity - 1))
-                    }
-                    className="text-gray-500 hover:text-gray-700"
-                    aria-label="Decrease quantity"
-                  >
-                    <MinusCircle size={20} />
-                  </button>
-                  <span className="w-8 text-center">{item.quantity}</span>
-                  <button
-                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                    className="text-gray-500 hover:text-gray-700"
-                    aria-label="Increase quantity"
-                  >
-                    <PlusCircle size={20} />
-                  </button>
+                <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                  <div className="flex items-center border rounded-lg">
+                    <button
+                      onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
+                      disabled={item.quantity <= 1}
+                      className="p-2 text-gray-600 hover:text-gray-900 disabled:text-gray-400"
+                      aria-label="Decrease quantity"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                    <input
+                      type="number"
+                      min="1"
+                      value={item.quantity}
+                      onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 1)}
+                      className="w-16 text-center border-x py-2 focus:outline-none no-spinner"
+                      aria-label="Product quantity"
+                    />
+                    <button
+                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      className="p-2 text-gray-600 hover:text-gray-900"
+                      aria-label="Increase quantity"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
                   <button
                     onClick={() => removeFromCart(item.id)}
-                    className="ml-4 text-red-500 hover:text-red-600"
+                    className="text-red-500 hover:text-red-600"
                     aria-label="Remove item"
                   >
                     <Trash2 size={20} />
@@ -143,25 +160,25 @@ const CartPage: React.FC = () => {
             <div className="space-y-3 mb-6">
               <div className="flex justify-between">
                 <span>Subtotaal</span>
-                <span>€{subtotal.toFixed(2)}</span>
+                <span>€{formatPrice(subtotal)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Verzendkosten</span>
                 <span>
                   {shippingCost === 0
                     ? 'Gratis'
-                    : `€${shippingCost.toFixed(2)}`}
+                    : `€${formatPrice(shippingCost)}`}
                 </span>
               </div>
               {shippingCost > 0 && (
                 <p className="text-sm text-gray-600">
-                  Nog €{(50 - subtotal).toFixed(2)} tot gratis verzending
+                  Nog €{formatPrice(50 - subtotal)} tot gratis verzending
                 </p>
               )}
               <div className="border-t pt-3">
                 <div className="flex justify-between font-bold">
                   <span>Totaal</span>
-                  <span>€{total.toFixed(2)}</span>
+                  <span>€{formatPrice(total)}</span>
                 </div>
               </div>
             </div>

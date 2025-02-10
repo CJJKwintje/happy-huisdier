@@ -78,6 +78,8 @@ export default function SearchResults({
               variantId={product.firstVariantId}
               hasAvailableVariant={product.hasAvailableVariant}
               variantsCount={product.variantsCount}
+              formattedPrice={product.formattedPrice}
+              formattedCompareAtPrice={product.formattedCompareAtPrice}
             />
           );
         })}

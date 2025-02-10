@@ -14,6 +14,8 @@ interface ProductCardProps {
   variantId?: string;
   hasAvailableVariant?: boolean;
   variantsCount?: number;
+  formattedPrice: string;
+  formattedCompareAtPrice?: string;
 }
 
 function ProductImage({ imageUrl, altText, title }: { imageUrl: string; altText: string; title: string }) {
@@ -56,7 +58,9 @@ export default function ProductCard({
   compareAtPrice,
   variantId,
   hasAvailableVariant = true,
-  variantsCount = 1
+  variantsCount = 1,
+  formattedPrice,
+  formattedCompareAtPrice
 }: ProductCardProps) {
   const { addToCart } = useCart();
   const [isAdded, setIsAdded] = React.useState(false);
@@ -125,19 +129,9 @@ export default function ProductCard({
         
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            {validPrice ? (
-              <>
-                <span className={`text-base font-light ${isOnSale ? 'text-red-500' : 'text-gray-900'}`}>
-                  €{price.toFixed(2)}
-                </span>
-                {isOnSale && validCompareAtPrice && (
-                  <span className="text-sm text-gray-500 line-through">
-                    €{compareAtPrice.toFixed(2)}
-                  </span>
-                )}
-              </>
-            ) : (
-              <span className="text-lg font-bold text-gray-900">Prijs op aanvraag</span>
+            <p className="font-bold text-gray-900">€{formattedPrice}</p>
+            {formattedCompareAtPrice && (
+              <p className="text-sm text-gray-500 line-through">€{formattedCompareAtPrice}</p>
             )}
           </div>
           {hasVariants ? (

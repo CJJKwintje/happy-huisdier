@@ -9,6 +9,7 @@ import MobileFilterMenu from '../components/MobileFilterMenu';
 import BackToTop from '../components/BackToTop';
 import SEO from '../components/SEO';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
+import { formatPrice } from '../utils/formatPrice';
 
 const SEARCH_PRODUCTS_QUERY = gql`
   query SearchProducts($query: String!) {
@@ -112,7 +113,9 @@ export default function SearchPage() {
           hasAvailableVariant,
           variantsCount: variants.length,
           firstVariantId: firstVariant?.id,
-          compareAtPrice
+          compareAtPrice,
+          formattedPrice: formatPrice(parseFloat(node.priceRange.minVariantPrice.amount)),
+          formattedCompareAtPrice: compareAtPrice ? formatPrice(compareAtPrice) : undefined
         };
       });
       

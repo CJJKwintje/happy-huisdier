@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import SEO from '../components/SEO';
+import { formatPrice } from '../utils/formatPrice';
 
 const PRODUCT_QUERY = gql`
   query GetProduct($id: ID!) {
@@ -322,11 +323,11 @@ export default function ProductPage() {
           <div className="border-t pt-4 mb-4">
             <div>
               <p className={`text-3xl font-bold ${isOnSale ? 'text-red-500' : 'text-gray-900'}`}>
-                €{price.toFixed(2)}
+                €{formatPrice(price)}
               </p>
               {isOnSale && compareAtPrice && (
                 <div className="flex items-center gap-2">
-                  <p className="text-lg text-gray-500 line-through">€{compareAtPrice.toFixed(2)}</p>
+                  <p className="text-lg text-gray-500 line-through">€{formatPrice(compareAtPrice)}</p>
                   <span className="px-2 py-1 text-sm font-medium text-red-500 bg-red-50 rounded">
                     -{discount}%
                   </span>
@@ -549,17 +550,13 @@ export default function ProductPage() {
                 <div className="space-y-2">
                   <p className="text-sm text-gray-500">Prijs</p>
                   <div className="flex items-center gap-2">
-                    <p
-                      className={`text-3xl font-bold ${
-                        isOnSale ? 'text-red-500' : 'text-gray-900'
-                      }`}
-                    >
-                      €{price.toFixed(2)}
+                    <p className={`text-3xl font-bold ${isOnSale ? 'text-red-500' : 'text-gray-900'}`}>
+                      €{formatPrice(price)}
                     </p>
                     {isOnSale && compareAtPrice && (
                       <>
                         <p className="text-lg text-gray-500 line-through">
-                          €{compareAtPrice.toFixed(2)}
+                          €{formatPrice(compareAtPrice)}
                         </p>
                         <span className="px-2 py-1 text-sm font-medium text-red-500 bg-red-50 rounded">
                           -{discount}%
