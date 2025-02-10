@@ -147,7 +147,7 @@ const Navbar: React.FC<NavbarProps> = ({ isMenuOpen, setIsMenuOpen }) => {
         <div className="flex justify-between items-center h-24 relative">
           {/* Left section with menu button and logo */}
           <div className={`flex items-center transition-all duration-300 ease-in-out ${
-            isSearchExpanded ? 'w-0 overflow-hidden md:w-auto' : 'w-auto'
+            isSearchExpanded ? 'w-0 opacity-0 overflow-hidden md:w-auto md:opacity-100' : 'w-auto opacity-100'
           }`}>
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -164,10 +164,10 @@ const Navbar: React.FC<NavbarProps> = ({ isMenuOpen, setIsMenuOpen }) => {
           {/* Search section */}
           <div 
             ref={searchContainerRef}
-            className={`md:flex-1 md:mx-8 transition-all duration-300 ${
+            className={`md:flex-1 md:mx-8 transition-all duration-300 ease-in-out transform ${
               isSearchExpanded 
-                ? 'absolute left-4 right-[104px] md:static md:right-auto' 
-                : 'hidden md:block'
+                ? 'absolute left-4 right-[104px] md:static md:right-auto opacity-100 translate-x-0' 
+                : 'hidden md:block opacity-0 -translate-x-4 md:translate-x-0 md:opacity-100'
             }`}
           >
             <div className="w-full relative">
@@ -232,8 +232,8 @@ const Navbar: React.FC<NavbarProps> = ({ isMenuOpen, setIsMenuOpen }) => {
           <div className="flex items-center gap-2">
             <button
               onClick={toggleSearch}
-              className={`md:hidden p-2 transition-transform duration-200 hover:scale-110 ${
-                isSearchExpanded ? 'hidden' : 'block'
+              className={`md:hidden p-2 transition-all duration-300 ease-in-out transform ${
+                isSearchExpanded ? 'opacity-0 scale-95 invisible' : 'opacity-100 scale-100 visible'
               }`}
               aria-label="Toggle search"
             >
