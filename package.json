@@ -16,10 +16,7 @@
     "@urql/core": "^4.2.3",
     "contentful": "^10.6.21",
     "lucide-react": "^0.344.0",
-<<<<<<< HEAD
-=======
     "openai": "^4.28.4",
->>>>>>> 29f35ef (Chatbot v0.1)
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-helmet-async": "^2.0.4",

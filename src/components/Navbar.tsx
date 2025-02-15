@@ -1,9 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-<<<<<<< HEAD
-import { ShoppingCart, Menu, X, Search, ChevronDown, User } from 'lucide-react';
-=======
 import { ShoppingCart, Menu, X, Search, ChevronDown, User, Truck, Timer, MessageCircleHeart } from 'lucide-react';
->>>>>>> 29f35ef (Chatbot v0.1)
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useQuery } from 'urql';
@@ -150,8 +146,6 @@ const Navbar: React.FC<NavbarProps> = ({ isMenuOpen, setIsMenuOpen }) => {
 
   return (
     <nav className="bg-white shadow-lg sticky top-0 z-50">
-<<<<<<< HEAD
-=======
       {/* Benefits Bar */}
       <div className="bg-[#63D7B2] text-white">
         <div className="container mx-auto px-4">
@@ -172,7 +166,6 @@ const Navbar: React.FC<NavbarProps> = ({ isMenuOpen, setIsMenuOpen }) => {
         </div>
       </div>
 
->>>>>>> 29f35ef (Chatbot v0.1)
       {/* Main Navigation */}
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-24 relative">

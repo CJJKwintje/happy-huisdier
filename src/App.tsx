@@ -13,10 +13,7 @@ import ProductPage from './pages/ProductPage';
 import CategoryPage from './pages/CategoryPage';
 import ContentPage from './pages/ContentPage';
 import ProductsPage from './pages/ProductsPage';
-<<<<<<< HEAD
-=======
 import ChatbotPage from './pages/ChatbotPage';
->>>>>>> 29f35ef (Chatbot v0.1)
 import CartPreview from './components/CartPreview';
 import ScrollToTop from './components/ScrollToTop';
 
@@ -40,10 +37,7 @@ function App() {
                   <Route path="/producten" element={<ProductsPage />} />
                   <Route path="/product/:id" element={<ProductPage />} />
                   <Route path="/categorie/:category" element={<CategoryPage />} />
-<<<<<<< HEAD
-=======
                   <Route path="/chat" element={<ChatbotPage />} />
->>>>>>> 29f35ef (Chatbot v0.1)
                   <Route path="/:slug" element={<ContentPage />} />
                 </Routes>
 
@@ -77,12 +71,9 @@ function App() {
                           <a href="/algemene-voorwaarden" className="text-gray-400 hover:text-white">
                             Algemene voorwaarden
                           </a>
-<<<<<<< HEAD
-=======
                           <a href="/chat" className="text-gray-400 hover:text-white">
                             Chat met Teddy
                           </a>
->>>>>>> 29f35ef (Chatbot v0.1)
                         </div>
                       </div>
                     </div>

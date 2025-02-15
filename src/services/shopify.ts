@@ -3,14 +3,6 @@ import { Client, cacheExchange, fetchExchange } from 'urql';
 const SHOPIFY_STORE_URL = 'https://yvdedm-5e.myshopify.com/api/2024-01/graphql';
 const SHOPIFY_STOREFRONT_TOKEN = 'f2891c0e910edc30275cac0cc8e32cff';
 
-<<<<<<< HEAD
-// Maximum number of retry attempts
-const MAX_RETRIES = 3;
-// Base delay between retries (in milliseconds)
-const BASE_RETRY_DELAY = 1000;
-
-=======
->>>>>>> 29f35ef (Chatbot v0.1)
 export const shopifyClient = new Client({
   url: SHOPIFY_STORE_URL,
   exchanges: [cacheExchange, fetchExchange],
@@ -21,9 +13,6 @@ export const shopifyClient = new Client({
   },
 });
 
-<<<<<<< HEAD
-// New Cart API mutations
-=======
 // Product search query
 const SEARCH_PRODUCTS_QUERY = `
   query SearchProducts($query: String!, $first: Int!) {
@@ -101,7 +90,6 @@ export const searchProducts = async (context: string) => {
 };
 
 // Cart API mutations
->>>>>>> 29f35ef (Chatbot v0.1)
 const CREATE_CART_MUTATION = `
   mutation cartCreate {
     cartCreate {
@@ -141,17 +129,6 @@ const executeWithRetry = async <T>(
   try {
     return await operation();
   } catch (error) {
-<<<<<<< HEAD
-    if (retryCount >= MAX_RETRIES) {
-      throw error;
-    }
-
-    const backoffDelay = BASE_RETRY_DELAY * Math.pow(2, retryCount);
-    const jitter = Math.random() * 1000;
-    const totalDelay = backoffDelay + jitter;
-
-    await delay(totalDelay);
-=======
     if (retryCount >= 3) {
       throw error;
     }
@@ -159,7 +136,6 @@ const executeWithRetry = async <T>(
     const backoffDelay = 1000 * Math.pow(2, retryCount);
     const jitter = Math.random() * 1000;
     await delay(backoffDelay + jitter);
->>>>>>> 29f35ef (Chatbot v0.1)
     
     return executeWithRetry(operation, retryCount + 1);
   }
@@ -180,10 +156,6 @@ export const createCheckout = async (
         .toPromise();
 
       if (!response.data && response.error) {
-<<<<<<< HEAD
-        console.error('Cart creation error:', response.error);
-=======
->>>>>>> 29f35ef (Chatbot v0.1)
         throw new Error('Netwerkfout: Kan geen verbinding maken met de betaalservice');
       }
 
@@ -191,21 +163,11 @@ export const createCheckout = async (
     });
 
     if (createCartResult.data?.cartCreate?.userErrors?.length > 0) {
-<<<<<<< HEAD
-      const error = createCartResult.data.cartCreate.userErrors[0];
-      console.error('Cart creation error:', error);
-      throw new Error(`Fout bij aanmaken winkelwagen: ${error.message}`);
-=======
       throw new Error(`Fout bij aanmaken winkelwagen: ${createCartResult.data.cartCreate.userErrors[0].message}`);
->>>>>>> 29f35ef (Chatbot v0.1)
     }
 
     const cartId = createCartResult.data?.cartCreate?.cart?.id;
     if (!cartId) {
-<<<<<<< HEAD
-      console.error('No cart ID received:', createCartResult);
-=======
->>>>>>> 29f35ef (Chatbot v0.1)
       throw new Error('Geen winkelwagen ID ontvangen van de betaalservice');
     }
 
@@ -222,10 +184,6 @@ export const createCheckout = async (
         .toPromise();
 
       if (!response.data && response.error) {
-<<<<<<< HEAD
-        console.error('Add to cart error:', response.error);
-=======
->>>>>>> 29f35ef (Chatbot v0.1)
         throw new Error('Netwerkfout: Kan geen producten toevoegen aan de winkelwagen');
       }
 
@@ -233,21 +191,11 @@ export const createCheckout = async (
     });
 
     if (addToCartResult.data?.cartLinesAdd?.userErrors?.length > 0) {
-<<<<<<< HEAD
-      const error = addToCartResult.data.cartLinesAdd.userErrors[0];
-      console.error('Add to cart error:', error);
-      throw new Error(`Fout bij toevoegen producten: ${error.message}`);
-=======
       throw new Error(`Fout bij toevoegen producten: ${addToCartResult.data.cartLinesAdd.userErrors[0].message}`);
->>>>>>> 29f35ef (Chatbot v0.1)
     }
 
     const checkoutUrl = addToCartResult.data?.cartLinesAdd?.cart?.checkoutUrl;
     if (!checkoutUrl) {
-<<<<<<< HEAD
-      console.error('No checkout URL received:', addToCartResult);
-=======
->>>>>>> 29f35ef (Chatbot v0.1)
       throw new Error('Geen checkout URL ontvangen van de betaalservice');
     }
 
